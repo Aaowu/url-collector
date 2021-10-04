@@ -38,7 +38,7 @@ func main() {
 			&cli.StringFlag{
 				Name:        "engine",
 				Aliases:     []string{"e"},
-				Usage:       "specify the search engine",
+				Usage:       "specify the search engine(google,bing)",
 				Value:       config.DefaultConf.SearchEngine,
 				Destination: &config.CurrentConf.SearchEngine,
 			},
