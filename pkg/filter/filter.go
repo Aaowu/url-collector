@@ -2,41 +2,24 @@ package filter
 
 import (
 	"strings"
+	"url-collector/config"
 	"url-collector/models"
 
 	mapset "github.com/deckarep/golang-set"
 )
 
-var URLFilter *filter = newFilter()
+var URLFilter *filter
 
 type filter struct {
 	uniqueSet mapset.Set
 	blackList []string
 }
 
-func newFilter() *filter {
-	return &filter{
+//Init 初始化
+func Init() {
+	URLFilter = &filter{
 		uniqueSet: mapset.NewSet(),
-		blackList: []string{"gov",
-			"g3.luciaz.me",
-			"www.youtube.com",
-			"gitee.com",
-			"github.com",
-			"stackoverflow.com",
-			"developer.aliyun.com",
-			"cloud.tencent.com",
-			"www.zhihu.com/question",
-			"blog.51cto.com",
-			"zhidao.baidu.com",
-			"www.cnblogs.com",
-			"coding.m.imooc.com",
-			"weibo.cn",
-			"www.taobao.com",
-			"www.google.com",
-			"go.microsoft.com",
-			"facebook.com",
-			"blog.csdn.net",
-		},
+		blackList: config.CurrentConf.BlackList,
 	}
 }
 

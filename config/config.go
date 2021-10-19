@@ -17,6 +17,7 @@ type AppConfig struct {
 	OutputFilePath string
 	SearchEngine   string
 	Keyword        string
+	BlackList      []string
 	BaseURL        map[string]string
 	RoutineCount   int
 }
@@ -25,6 +26,7 @@ type AppConfig struct {
 func Init() {
 	CurrentConf = new(AppConfig)
 	CurrentConf.BaseURL = DefaultConf.BaseURL
+	CurrentConf.BlackList = DefaultConf.BlackList
 }
 
 //GetBaseURL 获取搜索引擎对应的baseURL

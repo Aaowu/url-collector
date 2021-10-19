@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"url-collector/config"
+	"url-collector/pkg/filter"
 	"url-collector/pkg/searchengine"
 
 	"github.com/olekukonko/tablewriter"
@@ -15,6 +17,8 @@ import (
 func main() {
 	//初始化配置
 	config.Init()
+	//初始化过滤器
+	filter.Init()
 	author := cli.Author{
 		Name:  "无在无不在",
 		Email: "2227627947@qq.com",
@@ -111,5 +115,6 @@ func showConfig() {
 	table.AppendBulk(data)
 	table.SetCaption(true, "Current Config")
 	table.Render()
+	fmt.Println("[*] black list:", strings.Join(config.CurrentConf.BlackList, ","))
 	fmt.Println("[*] collecting...")
 }
