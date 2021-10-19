@@ -91,7 +91,7 @@ func (s *SearchEngine) save() {
 		s.saverWg.Add(1)
 		for result := range s.resultCh {
 			time.Sleep(time.Millisecond * 100)
-			fmt.Fprintln(s.resultWriter, result)
+			fmt.Fprintln(s.resultWriter, strings.ReplaceAll(result, "&amp;", "&"))
 		}
 		s.saverWg.Done()
 	}()
