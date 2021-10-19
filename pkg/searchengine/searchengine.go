@@ -253,7 +253,7 @@ func (s *SearchEngine) postAnswer() error {
 	params.Set("0", "心灵之约")
 	params.Set("1", "水朝夕")
 	params.Set("2", "csxy@123")
-	params.Set("origin", "aHR0cHM6Ly9nLmx1Y2lhei5tZS8=")
+	params.Set("origin", "aHR0cHM6Ly9nMy5sdWNpYXoubWUvZXh0ZG9tYWlucy93d3cuZ29vZ2xlLmNvbS9zb3JyeS9pbmRleD9jb250aW51ZT1odHRwczolMkYlMkZ3d3cuZ29vZ2xlLmNvbS5oayUyRnNlYXJjaCUzRnElM0QucGhwJTI1M0ZpZCUyNTNEJTI2JnE9RWhBbUJBR0FBQU1OM3dBQUFBQUFBT3NsR0pqenVvc0dJaEJVaVN5eXFjSXJmeExHaU14dHBzS1hNZ0Z5")
 	u := "https://g.luciaz.me/ip_ban_verify_page?origin=aHR0cHM6Ly9nLmx1Y2lhei5tZS8="
 	request, err := http.NewRequest(http.MethodPost, u, strings.NewReader(params.Encode()))
 	if err != nil {
