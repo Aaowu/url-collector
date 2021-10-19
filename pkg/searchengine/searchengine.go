@@ -3,10 +3,13 @@ package searchengine
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -17,8 +20,8 @@ import (
 	"url-collector/pkg/alg"
 	"url-collector/pkg/filter"
 
-	"github.com/asmcos/requests"
 	mapset "github.com/deckarep/golang-set"
+	"github.com/sirupsen/logrus"
 )
 
 //SearchEngine 搜索引擎
@@ -91,7 +94,8 @@ func (s *SearchEngine) save() {
 		s.saverWg.Add(1)
 		for result := range s.resultCh {
 			time.Sleep(time.Millisecond * 100)
-			fmt.Fprintln(s.resultWriter, result)
+			r := strings.ReplaceAll(result, "&amp;", "&")
+			fmt.Fprintln(s.resultWriter, r)
 		}
 		s.saverWg.Done()
 	}()
@@ -107,17 +111,35 @@ func (s *SearchEngine) fetch() {
 				case <-s.ctx.Done():
 					break LOOP
 				case dork := <-s.dorkCh:
-					//1.发送请求
-					headers := requests.Header{
-						"User-Agent": s.userAgent,
+					//跳过证书验证
+					client := &http.Client{
+						Transport: &http.Transport{
+							TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+						},
 					}
-					resp, err := requests.Get(dork, headers)
+					fmt.Println("dork:", dork)
+					//1.发送请求
+					request, err := http.NewRequest(http.MethodGet, dork, nil)
+					if err != nil {
+						log.Println("http.NewRequest failed,err:", err)
+						continue
+					}
+					request.Header.Set("User-Agent", s.userAgent)
+					resp, err := client.Do(request)
 					if err != nil {
 						log.Printf("requests.Get(%s) failed,err:%v", dork, err)
 						continue
 					}
+					defer resp.Body.Close()
+					bytes, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						log.Printf("ioutil.ReadAll failed,err:%v", err)
+						continue
+					}
+					text := string(bytes)
+					fmt.Println(text)
 					//2.解析响应 寻找指定文件的URL
-					if strings.Contains(resp.Text(), "需要验证您是否来自浙江大学") {
+					if strings.Contains(text, "需要验证您是否来自浙江大学") {
 						if err := s.postAnswer(); err != nil {
 							log.Println("s.postAnswer failed,err:", err)
 							return
@@ -125,7 +147,7 @@ func (s *SearchEngine) fetch() {
 						s.dorkCh <- dork
 						continue
 					}
-					matches := s.atagRe.FindAllStringSubmatch(resp.Text(), -1)
+					matches := s.atagRe.FindAllStringSubmatch(text, -1)
 					for _, match := range matches {
 						link := match[1]
 						URL, err := models.NewURL(link)
@@ -150,7 +172,7 @@ func (s *SearchEngine) fetch() {
 					}
 					keyword := u.Query().Get("q")
 					nextPageURLs := make([]string, 0)
-					matches = s.nextPageRe.FindAllStringSubmatch(resp.Text(), -1)
+					matches = s.nextPageRe.FindAllStringSubmatch(text, -1)
 					for _, match := range matches {
 						nextPageURL := s.baseURL + match[1]
 						temp, err := models.NewURL(nextPageURL)
@@ -219,20 +241,39 @@ func (s *SearchEngine) wait() {
 
 //提交答案
 func (s *SearchEngine) postAnswer() error {
-	headers := requests.Header{
-		"User-Agent": s.userAgent,
+	fmt.Println("提交答案中")
+	//跳过证书验证
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
 	}
-	data := requests.Datas{
-		"0":      "心灵之约",
-		"1":      "水朝夕",
-		"2":      "csxy@123",
-		"origin": "aHR0cHM6Ly9nLmx1Y2lhei5tZS8=",
-	}
-	resp, err := requests.Post("https://g.luciaz.me/ip_ban_verify_page?origin=aHR0cHM6Ly9nLmx1Y2lhei5tZS8=", data, headers)
+	//构造post传参
+	params := make(url.Values)
+	params.Set("0", "心灵之约")
+	params.Set("1", "水朝夕")
+	params.Set("2", "csxy@123")
+	params.Set("origin", "aHR0cHM6Ly9nLmx1Y2lhei5tZS8=")
+	u := "https://g.luciaz.me/ip_ban_verify_page?origin=aHR0cHM6Ly9nLmx1Y2lhei5tZS8="
+	request, err := http.NewRequest(http.MethodPost, u, strings.NewReader(params.Encode()))
 	if err != nil {
+		log.Println("http.NewRequest failed,err:", err)
 		return err
 	}
-	if strings.Contains(resp.Text(), "Wrong answer") {
+	request.Header.Set("User-Agent", s.userAgent)
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := client.Do(request)
+	if err != nil {
+		logrus.Error("client.Do failed,err:", err)
+		return err
+	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.Error("ioutil.ReadAll failed,err:", err)
+		return err
+	}
+	if strings.Contains(string(b), "Wrong answer") {
 		return errors.New("Wrong answer")
 	}
 	return nil
