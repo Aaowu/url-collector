@@ -33,5 +33,6 @@ var DefaultConf AppConfig = AppConfig{
 		"policies.google.com",
 		"webcache.googleusercontent.com",
 		"translate.google.com",
+		"support.google.com",
 	},
 }

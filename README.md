@@ -82,7 +82,8 @@ config.json 格式
 		"books.google.com",
 		"policies.google.com",
 		"webcache.googleusercontent.com",
-		"translate.google.com"
+		"translate.google.com",
+      "support.google.com"
     ]
 }
 ```
