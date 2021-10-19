@@ -28,6 +28,10 @@ GLOBAL OPTIONS:
    --version, -v                    print the version (default: false)
 ```
 
+## Screenshot
+
+![avatar](url-collector.png)
+
 ## Demo 
 
 ```shell
@@ -39,9 +43,50 @@ url-collector -f google-dork.txt -o result.txt
 url-collector -f google-dork.txt -o result.txt && python3 sqlmap.py -m result.txt --batch --random-agents
 #默认采用google镜像站点，如果你可以访问外网，可以手动指定搜索引擎为google
 url-collector -e google -k ".php?id="
+#将常用配置写到配置文件中
+url-collector -c config.json
+```
+config.json 格式  
+```json
+{
+    "output_file_path":"",
+    "input_file_path":"",
+    "keyword":"inurl:.php?id=",
+    "search_engine":"google-image",
+    "base_url":{
+		"google":       "https://www.google.com",
+		"google-image": "https://g.luciaz.me",
+		"bing":         "https://cn.bing.com"
+	},
+    "routine_count":5,
+    "black_list":[
+		"gov",
+		"g3.luciaz.me",
+		"www.youtube.com",
+		"gitee.com",
+		"github.com",
+		"stackoverflow.com",
+		"developer.aliyun.com",
+		"cloud.tencent.com",
+		"www.zhihu.com/question",
+		"blog.51cto.com",
+		"zhidao.baidu.com",
+		"www.cnblogs.com",
+		"coding.m.imooc.com",
+		"weibo.cn",
+		"www.taobao.com",
+		"www.google.com",
+		"go.microsoft.com",
+		"facebook.com",
+		"blog.csdn.net",
+		"books.google.com",
+		"policies.google.com",
+		"webcache.googleusercontent.com",
+		"translate.google.com"
+    ]
+}
 ```
 
-![avatar](url-collector.png)
 
 #### google-dork demo
 

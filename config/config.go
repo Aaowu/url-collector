@@ -2,31 +2,49 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 //CurrentConf 当前配置
-var CurrentConf *AppConfig
+var CurrentConf AppConfig
 
 //AppConfig App配置
 type AppConfig struct {
-	InputFilePath  string
-	OutputFilePath string
-	SearchEngine   string
-	Keyword        string
-	BlackList      []string
-	BaseURL        map[string]string
-	RoutineCount   int
+	RoutineCount   int               `mapstructure:"routine_count"`
+	BlackList      []string          `mapstructure:"black_list"`
+	BaseURL        map[string]string `mapstructure:"base_url"`
+	InputFilePath  string            `mapstructure:"input_file_path"`
+	OutputFilePath string            `mapstructure:"ouput_file_path"`
+	SearchEngine   string            `mapstructure:"search_engine"`
+	Keyword        string            `mapstructure:"keyword"`
 }
 
 //Init 初始化配置
-func Init() {
-	CurrentConf = new(AppConfig)
+func Init(filePath string) error {
 	CurrentConf.BaseURL = DefaultConf.BaseURL
 	CurrentConf.BlackList = DefaultConf.BlackList
+	if len(filePath) == 0 {
+		return nil
+	}
+	//指定配置文件
+	viper.SetConfigFile(filePath)
+	//读取配置文件
+	if err := viper.ReadInConfig(); err != nil {
+		fmt.Printf("viper.ReadInConfig() failed,err:%v\n", err)
+		return err
+	}
+	//反序列化配置信息
+	if err := viper.Unmarshal(&CurrentConf); err != nil {
+		fmt.Printf("viper.Unmarshal(&CurrentConf) failed,err:%v\n", err)
+		return err
+	}
+	return nil
 }
 
 //GetBaseURL 获取搜索引擎对应的baseURL

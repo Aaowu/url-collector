@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"url-collector/config"
@@ -14,11 +15,9 @@ import (
 	cli "github.com/urfave/cli/v2"
 )
 
+var configFile string
+
 func main() {
-	//初始化配置
-	config.Init()
-	//初始化过滤器
-	filter.Init()
 	author := cli.Author{
 		Name:  "无在无不在",
 		Email: "2227627947@qq.com",
@@ -51,7 +50,7 @@ func main() {
 			},
 			&cli.IntFlag{
 				Name:        "routine-count",
-				Aliases:     []string{"c"},
+				Aliases:     []string{"r"},
 				Usage:       "specify the count of goroutine",
 				Value:       config.DefaultConf.RoutineCount,
 				Destination: &config.CurrentConf.RoutineCount,
@@ -61,6 +60,12 @@ func main() {
 				Aliases:     []string{"k"},
 				Usage:       "specify the keyword",
 				Destination: &config.CurrentConf.Keyword,
+			},
+			&cli.StringFlag{
+				Name:        "config-file",
+				Aliases:     []string{"c"},
+				Usage:       "specify the config file",
+				Destination: &configFile,
 			},
 		},
 		Action: run,
@@ -72,19 +77,26 @@ func main() {
 }
 
 func run(c *cli.Context) (err error) {
-	//1.抽象出一个Reader
+	//1.初始化配置
+	if err := config.Init(configFile); err != nil {
+		log.Println("config.Init failed,err:", err)
+		return err
+	}
+	//2.初始化过滤器
+	filter.Init()
+	//3.抽象出一个Reader
 	reader, err := config.CurrentConf.GetReader()
 	if err != nil {
 		cli.ShowAppHelp(c)
 		return err
 	}
-	//2.抽象出一个Writer
+	//4.抽象出一个Writer
 	writer, err := config.CurrentConf.GetWriter()
 	if err != nil {
 		cli.ShowAppHelp(c)
 		return err
 	}
-	//3.创建搜索引擎对象
+	//5.创建搜索引擎对象
 	var engine *searchengine.SearchEngine
 	switch config.CurrentConf.SearchEngine {
 	case "google-image":
@@ -96,7 +108,7 @@ func run(c *cli.Context) (err error) {
 	default:
 		return errors.New("please specify a search engine,such as google-image,google,bing")
 	}
-	//4.开始采集
+	//6.开始采集
 	showConfig()
 	engine.Search()
 	return nil
