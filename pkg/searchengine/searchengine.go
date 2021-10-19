@@ -261,7 +261,7 @@ func (s *SearchEngine) postAnswer() error {
 		return err
 	}
 	request.Header.Set("User-Agent", s.userAgent)
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Content-Type", "multipart/form-data")
 	resp, err := client.Do(request)
 	if err != nil {
 		logrus.Error("client.Do failed,err:", err)
