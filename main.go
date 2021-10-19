@@ -116,13 +116,20 @@ func run(c *cli.Context) (err error) {
 
 func showConfig() {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"SearchEngine", "BaseURL", "RoutineCount"})
+	table.SetHeader([]string{"SearchEngine", "BaseURL", "RoutineCount", "Keyword", "InputFile", "OutputFile"})
 	table.SetAlignment(tablewriter.ALIGN_CENTER)
 	table.SetBorder(true)
 	table.SetRowLine(true)
 	table.SetAutoMergeCells(true)
 	data := [][]string{
-		{config.CurrentConf.SearchEngine, config.CurrentConf.GetBaseURL(), fmt.Sprintf("%d", config.CurrentConf.RoutineCount)},
+		{
+			config.CurrentConf.SearchEngine,
+			config.CurrentConf.GetBaseURL(),
+			fmt.Sprintf("%d", config.CurrentConf.RoutineCount),
+			config.CurrentConf.Keyword,
+			config.CurrentConf.InputFilePath,
+			config.CurrentConf.OutputFilePath,
+		},
 	}
 	table.AppendBulk(data)
 	table.SetCaption(true, "Current Config")
