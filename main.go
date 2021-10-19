@@ -2,16 +2,19 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"url-collector/config"
 	"url-collector/pkg/searchengine"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )
 
 func main() {
-
+	//初始化配置
+	config.Init()
 	author := cli.Author{
 		Name:  "无在无不在",
 		Email: "2227627947@qq.com",
@@ -58,9 +61,8 @@ func main() {
 		},
 		Action: run,
 	}
-
-	err := app.Run(os.Args)
-	if err != nil {
+	//启动app
+	if err := app.Run(os.Args); err != nil {
 		logrus.Error(err)
 	}
 }
@@ -81,16 +83,33 @@ func run(c *cli.Context) (err error) {
 	//3.创建搜索引擎对象
 	var engine *searchengine.SearchEngine
 	switch config.CurrentConf.SearchEngine {
+	case "google-image":
+		engine = searchengine.NewGoogleImage(config.CurrentConf.RoutineCount, reader, writer)
 	case "google":
 		engine = searchengine.NewGoogle(config.CurrentConf.RoutineCount, reader, writer)
-		break
 	case "bing":
 		engine = searchengine.NewBing(config.CurrentConf.RoutineCount, reader, writer)
-		break
 	default:
-		return errors.New("pls specify a search engine,such as google,bing")
+		return errors.New("please specify a search engine,such as google-image,google,bing")
 	}
 	//4.开始采集
+	showConfig()
 	engine.Search()
 	return nil
+}
+
+func showConfig() {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"SearchEngine", "BaseURL", "RoutineCount"})
+	table.SetAlignment(tablewriter.ALIGN_CENTER)
+	table.SetBorder(true)
+	table.SetRowLine(true)
+	table.SetAutoMergeCells(true)
+	data := [][]string{
+		{config.CurrentConf.SearchEngine, config.CurrentConf.GetBaseURL(), fmt.Sprintf("%d", config.CurrentConf.RoutineCount)},
+	}
+	table.AppendBulk(data)
+	table.SetCaption(true, "Current Config")
+	table.Render()
+	fmt.Println("[*] collecting...")
 }

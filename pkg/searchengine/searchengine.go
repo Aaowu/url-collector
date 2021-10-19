@@ -66,19 +66,24 @@ func newSearchEngine(baseURL string, nextPageRe *regexp.Regexp, fetchCount int, 
 
 //NewBing Bing搜索
 func NewBing(fetchCount int, dorkReader io.Reader, resultWriter io.Writer) *SearchEngine {
-	baseURL := "https://cn.bing.com"
 	nextPageRe := regexp.MustCompile(`<a[^>]+href="(/search\?q=[^>]+)"[^>]+>`)
 	userAgent := "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"
 	rawQueryParam := ""
-	return newSearchEngine(baseURL, nextPageRe, fetchCount, dorkReader, resultWriter, userAgent, rawQueryParam)
+	return newSearchEngine(config.CurrentConf.GetBaseURL(), nextPageRe, fetchCount, dorkReader, resultWriter, userAgent, rawQueryParam)
 }
 
-//NewGoogle Goolge 搜索
-func NewGoogle(fetchCount int, dorkReader io.Reader, resultWriter io.Writer) *SearchEngine {
-	baseURL := "https://g.luciaz.me"
+//NewGoogleImage Goolge镜像搜索
+func NewGoogleImage(fetchCount int, dorkReader io.Reader, resultWriter io.Writer) *SearchEngine {
 	nextPageRe := regexp.MustCompile(`<a href="(/search\?q=[^>]+)" id="pnnext"[^>]+>`)
 	userAgent := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:92.0) Gecko/20100101 Firefox/92.0"
-	return newSearchEngine(baseURL, nextPageRe, fetchCount, dorkReader, resultWriter, userAgent, "")
+	return newSearchEngine(config.CurrentConf.GetBaseURL(), nextPageRe, fetchCount, dorkReader, resultWriter, userAgent, "")
+}
+
+//NewGoogle Google搜索
+func NewGoogle(fetchCount int, dorkReader io.Reader, resultWriter io.Writer) *SearchEngine {
+	nextPageRe := regexp.MustCompile(`<a href="(/search\?q=[^>]+)" id="pnnext"[^>]+>`)
+	userAgent := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:92.0) Gecko/20100101 Firefox/92.0"
+	return newSearchEngine(config.CurrentConf.GetBaseURL(), nextPageRe, fetchCount, dorkReader, resultWriter, userAgent, "")
 }
 
 func (s *SearchEngine) save() {

@@ -9,7 +9,7 @@ import (
 )
 
 //CurrentConf 当前配置
-var CurrentConf = new(AppConfig)
+var CurrentConf *AppConfig
 
 //AppConfig App配置
 type AppConfig struct {
@@ -17,7 +17,19 @@ type AppConfig struct {
 	OutputFilePath string
 	SearchEngine   string
 	Keyword        string
+	BaseURL        map[string]string
 	RoutineCount   int
+}
+
+//Init 初始化配置
+func Init() {
+	CurrentConf = new(AppConfig)
+	CurrentConf.BaseURL = DefaultConf.BaseURL
+}
+
+//GetBaseURL 获取搜索引擎对应的baseURL
+func (a *AppConfig) GetBaseURL() string {
+	return a.BaseURL[a.SearchEngine]
 }
 
 //GetReader 将输入的文件或者关键字抽象为一个Reader

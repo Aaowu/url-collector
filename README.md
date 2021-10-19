@@ -20,7 +20,7 @@ COMMANDS:
 GLOBAL OPTIONS:
    --file value, -f value           input from a file
    --output value, -o value         specify the output file
-   --engine value, -e value         specify the search engine (default: "google")
+   --engine value, -e value         specify the search engine(google,bing) (default: "google-image")
    --routine-count value, -c value  specify the count of goroutine (default: 5)
    --keyword value, -k value        specify the keyword
    --help, -h                       show help (default: false)
@@ -36,9 +36,14 @@ url-collector -k ".php?id="
 url-collector -f google-dork.txt -o result.txt
 #和sqlmap联动
 url-collector -f google-dork.txt -o result.txt && python3 sqlmap.py -m result.txt --batch --random-agents
+#默认采用google镜像站点，如果你可以访问外网，可以手动指定搜索引擎为google
+url-collector -e google -k ".php?id="
 ```
 
+![avatar](url-collector.png)
+
 #### google-dork demo
+
 ```
 inurl:".asp?id="
 inurl:".jsp?id="
@@ -1704,4 +1709,3 @@ inurl:your_orders.php?ID=
 inurl:zb/view.php?uid=
 ```
 
-![avatar](https://img-blog.csdnimg.cn/20211005030802669.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBA5peg5Zyo5peg5LiN5Zyo,size_20,color_FFFFFF,t_70,g_se,x_16)
