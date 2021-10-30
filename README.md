@@ -10,7 +10,7 @@ USAGE:
    url-collector
 
 VERSION:
-   v0.1
+   v0.2
 
 AUTHOR:
    无在无不在 <2227627947@qq.com>
@@ -19,13 +19,16 @@ COMMANDS:
    help, h  Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --file value, -f value           input from a file
+   --input value, -i value          input from a file
    --output value, -o value         specify the output file
-   --engine value, -e value         specify the search engine(google,bing) (default: "google-image")
-   --routine-count value, -c value  specify the count of goroutine (default: 5)
+   --engine value, -e value         specify the search engine(google,bing,baidu,google-image) (default: "google-image")
+   --routine-count value, -r value  specify the count of goroutine (default: 5)
    --keyword value, -k value        specify the keyword
+   --config-file value, -c value    specify the config file
+   --format value, -f value         specify output format(url、domain、protocol_domain) (default: "url")
    --help, -h                       show help (default: false)
    --version, -v                    print the version (default: false)
+ERRO[0000] specify -f or -k please         
 ```
 
 ## Screenshot
@@ -43,6 +46,8 @@ url-collector -f google-dork.txt -o result.txt
 url-collector -f google-dork.txt -o result.txt && python3 sqlmap.py -m result.txt --batch --random-agents
 #默认采用google镜像站点，如果你可以访问外网，可以手动指定搜索引擎为google
 url-collector -e google -k ".php?id="
+#百度url采集
+url-collector -e baidu -k ".php?id=1"
 #将常用配置写到配置文件中
 url-collector -c config.json
 ```
@@ -53,14 +58,18 @@ config.json 格式
     "input_file_path":"",
     "keyword":"inurl:.php?id=",
     "search_engine":"google-image",
+	"format":"url",
     "base_url":{
-		"google":       "https://www.google.com",
-		"google-image": "https://g.luciaz.me",
-		"bing":         "https://cn.bing.com"
+		"google":       "https://www.google.com/search?q=$keyword",
+		"google-image": "https://g.luciaz.me/search?q=$keyword",
+		"bing":         "https://cn.bing.com/search?q=$keyword",
+		"baidu":        "https://www.baidu.com/s?wd=$keyword"	
 	},
     "routine_count":5,
     "black_list":[
 		"gov",
+		"baidu.com",
+		"cache.baiducontent.com",
 		"g3.luciaz.me",
 		"www.youtube.com",
 		"gitee.com",
@@ -82,8 +91,7 @@ config.json 格式
 		"books.google.com",
 		"policies.google.com",
 		"webcache.googleusercontent.com",
-		"translate.google.com",
-      "support.google.com"
+		"translate.google.com"
     ]
 }
 ```
@@ -1756,3 +1764,8 @@ inurl:your_orders.php?ID=
 inurl:zb/view.php?uid=
 ```
 
+<<<<<<< HEAD
+![avatar](https://img-blog.csdnimg.cn/20211005030802669.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBA5peg5Zyo5peg5LiN5Zyo,size_20,color_FFFFFF,t_70,g_se,x_16)
+
+=======
+>>>>>>> 18300e2f68cfa2602849ad50a26f14965b7858d2

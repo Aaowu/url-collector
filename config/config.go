@@ -23,6 +23,7 @@ type AppConfig struct {
 	OutputFilePath string            `mapstructure:"ouput_file_path"`
 	SearchEngine   string            `mapstructure:"search_engine"`
 	Keyword        string            `mapstructure:"keyword"`
+	Format         string            `mapstructure:"format"`
 }
 
 //Init 初始化配置

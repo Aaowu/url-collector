@@ -26,12 +26,12 @@ func main() {
 		Name:      "URL-Collector",
 		Usage:     "Collect URLs based on dork",
 		UsageText: "url-collector",
-		Version:   "v0.1",
+		Version:   "v0.2",
 		Authors:   []*cli.Author{&author},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "file",
-				Aliases:     []string{"f"},
+				Name:        "input",
+				Aliases:     []string{"i"},
 				Usage:       "input from a file",
 				Destination: &config.CurrentConf.InputFilePath,
 			},
@@ -44,7 +44,7 @@ func main() {
 			&cli.StringFlag{
 				Name:        "engine",
 				Aliases:     []string{"e"},
-				Usage:       "specify the search engine(google,bing)",
+				Usage:       "specify the search engine(google,bing,baidu,google-image)",
 				Value:       config.DefaultConf.SearchEngine,
 				Destination: &config.CurrentConf.SearchEngine,
 			},
@@ -66,6 +66,13 @@ func main() {
 				Aliases:     []string{"c"},
 				Usage:       "specify the config file",
 				Destination: &configFile,
+			},
+			&cli.StringFlag{
+				Name:        "format",
+				Aliases:     []string{"f"},
+				Usage:       "specify output format(url、domain、protocol_domain)",
+				Value:       config.DefaultConf.Format,
+				Destination: &config.CurrentConf.Format,
 			},
 		},
 		Action: run,
@@ -96,15 +103,23 @@ func run(c *cli.Context) (err error) {
 		cli.ShowAppHelp(c)
 		return err
 	}
-	//5.创建搜索引擎对象
+	//3.创建搜索引擎对象
+	baseConf := searchengine.BaseConfig{
+		FetchCount:   config.CurrentConf.RoutineCount,
+		Format:       config.CurrentConf.Format,
+		DorkReader:   reader,
+		ResultWriter: writer,
+	}
 	var engine *searchengine.SearchEngine
 	switch config.CurrentConf.SearchEngine {
 	case "google-image":
-		engine = searchengine.NewGoogleImage(config.CurrentConf.RoutineCount, reader, writer)
+		engine = searchengine.NewGoogleImage(baseConf)
 	case "google":
-		engine = searchengine.NewGoogle(config.CurrentConf.RoutineCount, reader, writer)
+		engine = searchengine.NewGoogle(baseConf)
 	case "bing":
-		engine = searchengine.NewBing(config.CurrentConf.RoutineCount, reader, writer)
+		engine = searchengine.NewBing(baseConf)
+	case "baidu":
+		engine = searchengine.NewBaidu(baseConf)
 	default:
 		return errors.New("please specify a search engine,such as google-image,google,bing")
 	}
@@ -116,7 +131,7 @@ func run(c *cli.Context) (err error) {
 
 func showConfig() {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"SearchEngine", "BaseURL", "RoutineCount", "Keyword", "InputFile", "OutputFile"})
+	table.SetHeader([]string{"SearchEngine", "BaseURL", "RoutineCount", "Keyword", "InputFile", "OutputFile", "Format"})
 	table.SetAlignment(tablewriter.ALIGN_CENTER)
 	table.SetBorder(true)
 	table.SetRowLine(true)
@@ -129,6 +144,7 @@ func showConfig() {
 			config.CurrentConf.Keyword,
 			config.CurrentConf.InputFilePath,
 			config.CurrentConf.OutputFilePath,
+			config.CurrentConf.Format,
 		},
 	}
 	table.AppendBulk(data)

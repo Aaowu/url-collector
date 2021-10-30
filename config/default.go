@@ -4,13 +4,17 @@ package config
 var DefaultConf AppConfig = AppConfig{
 	RoutineCount: 5,
 	SearchEngine: "google-image",
+	Format:       "url",
 	BaseURL: map[string]string{
-		"google":       "https://www.google.com",
-		"google-image": "https://g.luciaz.me",
-		"bing":         "https://cn.bing.com",
+		"google":       "https://www.google.com/search?q=$keyword",
+		"google-image": "https://g.luciaz.me/search?q=$keyword",
+		"bing":         "https://cn.bing.com/search?q=$keyword",
+		"baidu":        "https://www.baidu.com/s?wd=$keyword",
 	},
 	BlackList: []string{
 		"gov",
+		"baidu.com",
+		"cache.baiducontent.com",
 		"g3.luciaz.me",
 		"www.youtube.com",
 		"gitee.com",

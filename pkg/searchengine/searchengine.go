@@ -3,121 +3,158 @@ package searchengine
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 	"url-collector/config"
-	"url-collector/models"
 	"url-collector/pkg/alg"
 	"url-collector/pkg/filter"
 
-	"github.com/asmcos/requests"
 	mapset "github.com/deckarep/golang-set"
+	"github.com/sirupsen/logrus"
 )
 
-//SearchEngine 搜索引擎
-type SearchEngine struct {
-	dorkReader      io.Reader
-	resultWriter    io.Writer
-	fetchCount      int
-	baseURL         string
-	RawQueryParam   string
-	userAgent       string
-	nextPageRe      *regexp.Regexp
-	atagRe          *regexp.Regexp
-	progress        *alg.Progress
-	dorkCh          chan string
-	resultCh        chan string
-	saverWg         sync.WaitGroup
-	dorkWg          sync.WaitGroup
-	fetcherWg       sync.WaitGroup
-	ctx             context.Context
-	cancel          context.CancelFunc
-	FinishedDorkSet mapset.Set
-}
-
-func newSearchEngine(baseURL string, nextPageRe *regexp.Regexp, fetchCount int, dorkReader io.Reader, resultWriter io.Writer, userAgent string, rawQueryParam string) *SearchEngine {
-	progress := alg.NewProgress()
+func newSearchEngine(config SearchEngineConfig) *SearchEngine {
 	ctx, cancel := context.WithCancel(context.Background())
-	atagRe := regexp.MustCompile(`<a[^>]+href="(http[^>"]+)"[^>]+>`)
-
 	return &SearchEngine{
-		baseURL:         baseURL,
-		nextPageRe:      nextPageRe,
-		atagRe:          atagRe,
-		dorkReader:      dorkReader,
-		resultWriter:    resultWriter,
-		dorkCh:          make(chan string, 10240),
-		resultCh:        make(chan string, 1024),
-		ctx:             ctx,
-		cancel:          cancel,
-		progress:        progress,
-		userAgent:       userAgent,
-		RawQueryParam:   rawQueryParam,
-		FinishedDorkSet: mapset.NewSet(),
+		SearchEngineConfig: config,
+		atagRe:             regexp.MustCompile(`<a[^>]+href="(http[^>"]+)"[^>]+>`),
+		dorkCh:             make(chan string, 10240),
+		resultCh:           make(chan string, 1024),
+		ctx:                ctx,
+		cancel:             cancel,
+		progress:           alg.NewProgress(),
+		FinishedDorkSet:    mapset.NewSet(),
 	}
 }
 
 //NewBing Bing搜索
-func NewBing(fetchCount int, dorkReader io.Reader, resultWriter io.Writer) *SearchEngine {
-	nextPageRe := regexp.MustCompile(`<a[^>]+href="(/search\?q=[^>]+)"[^>]+>`)
-	userAgent := "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"
-	rawQueryParam := ""
-	return newSearchEngine(config.CurrentConf.GetBaseURL(), nextPageRe, fetchCount, dorkReader, resultWriter, userAgent, rawQueryParam)
+func NewBing(conf BaseConfig) *SearchEngine {
+	return newSearchEngine(SearchEngineConfig{
+		baseURL:    config.CurrentConf.GetBaseURL(),
+		nextPageRe: regexp.MustCompile(`<a[^>]+href="(/search\?q=[^>]+)"[^>]+>`),
+		userAgent:  "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1",
+	})
 }
 
-//NewGoogleImage Goolge镜像搜索
-func NewGoogleImage(fetchCount int, dorkReader io.Reader, resultWriter io.Writer) *SearchEngine {
-	nextPageRe := regexp.MustCompile(`<a href="(/search\?q=[^>]+)" id="pnnext"[^>]+>`)
-	userAgent := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:92.0) Gecko/20100101 Firefox/92.0"
-	return newSearchEngine(config.CurrentConf.GetBaseURL(), nextPageRe, fetchCount, dorkReader, resultWriter, userAgent, "")
+//NewGoogle Goolge 镜像搜索
+func NewGoogleImage(conf BaseConfig) *SearchEngine {
+	return newSearchEngine(SearchEngineConfig{
+		BaseConfig: conf,
+		baseURL:    config.CurrentConf.GetBaseURL(),
+		userAgent:  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:92.0) Gecko/20100101 Firefox/92.0",
+		nextPageRe: regexp.MustCompile(`<a href="(/search\?q=[^>]+)" id="pnnext"[^>]+>`),
+	})
+}
+
+//NewBaidu Baidu 搜索
+func NewBaidu(conf BaseConfig) *SearchEngine {
+	return newSearchEngine(SearchEngineConfig{
+		BaseConfig: conf,
+		baseURL:    config.CurrentConf.GetBaseURL(),
+		userAgent:  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:92.0) Gecko/20100101 Firefox/92.0",
+		nextPageRe: regexp.MustCompile(`<a class="n" href="(/s\?wd=[^>]+)">下一页 &gt;</a>`),
+	})
 }
 
 //NewGoogle Google搜索
-func NewGoogle(fetchCount int, dorkReader io.Reader, resultWriter io.Writer) *SearchEngine {
-	nextPageRe := regexp.MustCompile(`<a href="(/search\?q=[^>]+)" id="pnnext"[^>]+>`)
-	userAgent := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:92.0) Gecko/20100101 Firefox/92.0"
-	return newSearchEngine(config.CurrentConf.GetBaseURL(), nextPageRe, fetchCount, dorkReader, resultWriter, userAgent, "")
+func NewGoogle(conf BaseConfig) *SearchEngine {
+	return newSearchEngine(SearchEngineConfig{
+		BaseConfig: conf,
+		baseURL:    config.CurrentConf.GetBaseURL(),
+		nextPageRe: regexp.MustCompile(`<a href="(/search\?q=[^>]+)" id="pnnext"[^>]+>`),
+		userAgent:  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:92.0) Gecko/20100101 Firefox/92.0",
+	})
+
 }
 
 func (s *SearchEngine) save() {
+	s.saverWg.Add(1)
 	go func() {
-		s.saverWg.Add(1)
 		for result := range s.resultCh {
 			time.Sleep(time.Millisecond * 100)
-			fmt.Fprintln(s.resultWriter, strings.ReplaceAll(result, "&amp;", "&"))
+			//0.格式化结果
+			r, err := s.formatResult(result)
+			if err != nil {
+				log.Println("s.formatResult failed,err:", err)
+				continue
+			}
+			//1.过滤重复的
+			if val, err := filter.URLFilter.IsDuplicate(r); err != nil || val {
+				continue
+			}
+			//2.过滤黑名单中的
+			if filter.URLFilter.IsInBlackList(r) {
+				continue
+			}
+			fmt.Fprintln(s.ResultWriter, r)
 		}
 		s.saverWg.Done()
 	}()
 }
 
+//根据配置项格式化采集结果
+func (s *SearchEngine) formatResult(rawurl string) (string, error) {
+	URL, err := url.Parse(rawurl)
+	if err != nil {
+		return "", err
+	}
+	switch s.Format {
+	case "domain":
+		return URL.Host, nil
+	case "url":
+		return strings.ReplaceAll(rawurl, "&amp;", "&"), nil
+	case "protocol_domain":
+		return URL.Scheme + "://" + URL.Host, nil
+	}
+	return rawurl, nil
+}
+
+//采集url
 func (s *SearchEngine) fetch() {
 	for i := 0; i < config.CurrentConf.RoutineCount; i++ {
+		s.fetcherWg.Add(1)
 		go func() {
-			s.fetcherWg.Add(1)
 		LOOP:
 			for {
 				select {
 				case <-s.ctx.Done():
 					break LOOP
 				case dork := <-s.dorkCh:
-					//1.发送请求
-					headers := requests.Header{
-						"User-Agent": s.userAgent,
+					//跳过证书验证
+					client := &http.Client{
+						Transport: &http.Transport{
+							TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+						},
 					}
-					resp, err := requests.Get(dork, headers)
+					//1.发送请求
+					request, err := http.NewRequest(http.MethodGet, dork, nil)
+					if err != nil {
+						log.Println("http.NewRequest failed,err:", err)
+						continue
+					}
+					request.Header.Set("User-Agent", s.userAgent)
+					resp, err := client.Do(request)
 					if err != nil {
 						log.Printf("requests.Get(%s) failed,err:%v", dork, err)
 						continue
 					}
+					defer resp.Body.Close()
+					bytes, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						log.Printf("ioutil.ReadAll failed,err:%v", err)
+						continue
+					}
+					text := string(bytes)
 					//2.解析响应 寻找指定文件的URL
-					if strings.Contains(resp.Text(), "需要验证您是否来自浙江大学") {
+					if strings.Contains(text, "需要验证您是否来自浙江大学") {
 						if err := s.postAnswer(); err != nil {
 							log.Println("s.postAnswer failed,err:", err)
 							return
@@ -125,22 +162,16 @@ func (s *SearchEngine) fetch() {
 						s.dorkCh <- dork
 						continue
 					}
-					matches := s.atagRe.FindAllStringSubmatch(resp.Text(), -1)
+					matches := s.atagRe.FindAllStringSubmatch(text, -1)
 					for _, match := range matches {
 						link := match[1]
-						URL, err := models.NewURL(link)
+						//0.检查重定向
+						url, err := filter.URLFilter.CheckRedirect(link)
 						if err != nil {
+							log.Println("filter.URLFilter.CheckRedirect failed,,err:", err)
 							continue
 						}
-						//1.过滤重复的url
-						if filter.URLFilter.IsDuplicate(URL) {
-							continue
-						}
-						//2.过去黑名单中的url 例如gov
-						if filter.URLFilter.IsInBlackList(link) {
-							continue
-						}
-						s.resultCh <- link
+						s.resultCh <- url
 					}
 					//3.寻找“下一页URL”
 					u, err := url.Parse(dork)
@@ -150,20 +181,11 @@ func (s *SearchEngine) fetch() {
 					}
 					keyword := u.Query().Get("q")
 					nextPageURLs := make([]string, 0)
-					matches = s.nextPageRe.FindAllStringSubmatch(resp.Text(), -1)
+					matches = s.nextPageRe.FindAllStringSubmatch(text, -1)
 					for _, match := range matches {
-						nextPageURL := s.baseURL + match[1]
-						temp, err := models.NewURL(nextPageURL)
-						if err != nil {
-							log.Println("models.NewURL failed,err:", err)
-							continue
-						}
-						if temp.URL.Query().Get("q") != keyword && temp.URL.Query().Get("q") != url.QueryEscape(keyword) {
-							continue
-						}
+						nextPageURL := strings.ReplaceAll(u.Scheme+"://"+u.Host+match[1], "&amp;", "&")
 						nextPageURLs = append(nextPageURLs, nextPageURL)
 					}
-
 					if len(nextPageURLs) > 0 {
 						for i := range nextPageURLs {
 							s.dorkCh <- nextPageURLs[i]
@@ -192,10 +214,10 @@ func (s *SearchEngine) Search() {
 	//发送请求 （生产者:慢）
 	s.fetch()
 	//从reader中读取dork
-	scanner := bufio.NewScanner(s.dorkReader)
+	scanner := bufio.NewScanner(s.DorkReader)
 	for scanner.Scan() {
 		keyword := strings.TrimSpace(scanner.Text())
-		request := fmt.Sprintf("%s/search?q=%s&%s", s.baseURL, url.QueryEscape(keyword), s.RawQueryParam)
+		request := strings.ReplaceAll(s.baseURL, "$keyword", url.QueryEscape(keyword))
 		s.dorkCh <- request
 		s.dorkWg.Add(1)
 		s.progress.AddTotal()
@@ -219,20 +241,39 @@ func (s *SearchEngine) wait() {
 
 //提交答案
 func (s *SearchEngine) postAnswer() error {
-	headers := requests.Header{
-		"User-Agent": s.userAgent,
+	fmt.Println("提交答案中")
+	//跳过证书验证
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
 	}
-	data := requests.Datas{
-		"0":      "心灵之约",
-		"1":      "水朝夕",
-		"2":      "csxy@123",
-		"origin": "aHR0cHM6Ly9nLmx1Y2lhei5tZS8=",
-	}
-	resp, err := requests.Post("https://g.luciaz.me/ip_ban_verify_page?origin=aHR0cHM6Ly9nLmx1Y2lhei5tZS8=", data, headers)
+	//构造post传参
+	params := make(url.Values)
+	params.Set("0", "心灵之约")
+	params.Set("1", "水朝夕")
+	params.Set("2", "csxy@123")
+	params.Set("origin", "aHR0cHM6Ly9nMy5sdWNpYXoubWUvZXh0ZG9tYWlucy93d3cuZ29vZ2xlLmNvbS9zb3JyeS9pbmRleD9jb250aW51ZT1odHRwczolMkYlMkZ3d3cuZ29vZ2xlLmNvbS5oayUyRnNlYXJjaCUzRnElM0QucGhwJTI1M0ZpZCUyNTNEJTI2JnE9RWhBbUJBR0FBQU1OM3dBQUFBQUFBT3NsR0pqenVvc0dJaEJVaVN5eXFjSXJmeExHaU14dHBzS1hNZ0Z5")
+	u := "https://g.luciaz.me/ip_ban_verify_page?origin=aHR0cHM6Ly9nLmx1Y2lhei5tZS8="
+	request, err := http.NewRequest(http.MethodPost, u, strings.NewReader(params.Encode()))
 	if err != nil {
+		log.Println("http.NewRequest failed,err:", err)
 		return err
 	}
-	if strings.Contains(resp.Text(), "Wrong answer") {
+	request.Header.Set("User-Agent", s.userAgent)
+	request.Header.Set("Content-Type", "multipart/form-data")
+	resp, err := client.Do(request)
+	if err != nil {
+		logrus.Error("client.Do failed,err:", err)
+		return err
+	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.Error("ioutil.ReadAll failed,err:", err)
+		return err
+	}
+	if strings.Contains(string(b), "Wrong answer") {
 		return errors.New("Wrong answer")
 	}
 	return nil
