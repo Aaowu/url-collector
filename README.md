@@ -50,6 +50,10 @@ url-collector -e google -k ".php?id="
 url-collector -e baidu -k ".php?id=1"
 #将常用配置写到配置文件中
 url-collector -c config.json
+#输出域名
+url-collector -e baidu -k ".php?id=1" -f domain
+#输出协议加域名
+url-collector -e baidu -k ".php?id=1" -f protocol_domain
 ```
 config.json 格式  
 ```json
