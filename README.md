@@ -1770,8 +1770,4 @@ inurl:your_orders.php?ID=
 inurl:zb/view.php?uid=
 ```
 
-<<<<<<< HEAD
-![avatar](https://img-blog.csdnimg.cn/20211005030802669.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBA5peg5Zyo5peg5LiN5Zyo,size_20,color_FFFFFF,t_70,g_se,x_16)
 
-=======
->>>>>>> 18300e2f68cfa2602849ad50a26f14965b7858d2
