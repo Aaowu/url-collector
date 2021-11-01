@@ -14,6 +14,13 @@ var DefaultConf AppConfig = AppConfig{
 	BlackList: []string{
 		"gov",
 		"baidu.com",
+		"csdn.net",
+		"voidcc.com",
+		"blog.sina.com.cn",
+		"segmentfault.com",
+		"youku.com",
+		"wenwen.sogou.com",
+		"hao123.com",
 		"cache.baiducontent.com",
 		"g3.luciaz.me",
 		"www.youtube.com",

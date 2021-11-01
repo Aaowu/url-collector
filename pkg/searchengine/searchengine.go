@@ -3,12 +3,9 @@ package searchengine
 import (
 	"bufio"
 	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -16,9 +13,9 @@ import (
 	"url-collector/config"
 	"url-collector/pkg/alg"
 	"url-collector/pkg/filter"
+	"url-collector/pkg/request"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/sirupsen/logrus"
 )
 
 func newSearchEngine(config SearchEngineConfig) *SearchEngine {
@@ -128,23 +125,18 @@ func (s *SearchEngine) fetch() {
 				case <-s.ctx.Done():
 					break LOOP
 				case dork := <-s.dorkCh:
-					//跳过证书验证
-					client := &http.Client{
-						Transport: &http.Transport{
-							TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-						},
+					headers := map[string]string{
+						"User-Agent":    s.userAgent,
+						"X-Forward-For": "genIP()",
 					}
 					//1.发送请求
-					request, err := http.NewRequest(http.MethodGet, dork, nil)
-					if err != nil {
-						log.Println("http.NewRequest failed,err:", err)
-						continue
-					}
-					request.Header.Set("User-Agent", s.userAgent)
-					resp, err := client.Do(request)
+					resp, err := request.Get(dork, headers)
 					if err != nil {
 						log.Printf("requests.Get(%s) failed,err:%v", dork, err)
 						continue
+					}
+					if resp.StatusCode > 300 && resp.StatusCode < 400 {
+						s.dorkCh <- resp.Header.Get("Location")
 					}
 					defer resp.Body.Close()
 					bytes, err := ioutil.ReadAll(resp.Body)
@@ -159,6 +151,14 @@ func (s *SearchEngine) fetch() {
 							log.Println("s.postAnswer failed,err:", err)
 							return
 						}
+						s.dorkCh <- dork
+						continue
+					}
+					if strings.Contains(text, "window.location.href") {
+						s.dorkCh <- dork
+						continue
+					}
+					if strings.Contains(text, "网络不给力，请稍后重试") {
 						s.dorkCh <- dork
 						continue
 					}
@@ -217,7 +217,7 @@ func (s *SearchEngine) Search() {
 	scanner := bufio.NewScanner(s.DorkReader)
 	for scanner.Scan() {
 		keyword := strings.TrimSpace(scanner.Text())
-		request := strings.ReplaceAll(s.baseURL, "$keyword", url.QueryEscape(keyword))
+		request := strings.ReplaceAll(s.baseURL, "$keyword", keyword)
 		s.dorkCh <- request
 		s.dorkWg.Add(1)
 		s.progress.AddTotal()
@@ -241,40 +241,20 @@ func (s *SearchEngine) wait() {
 
 //提交答案
 func (s *SearchEngine) postAnswer() error {
-	fmt.Println("提交答案中")
-	//跳过证书验证
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+	data := map[string]string{
+		"0": "心灵之约",
+		"1": "水朝夕",
+		"2": "csxy@123",
 	}
-	//构造post传参
-	params := make(url.Values)
-	params.Set("0", "心灵之约")
-	params.Set("1", "水朝夕")
-	params.Set("2", "csxy@123")
-	params.Set("origin", "aHR0cHM6Ly9nMy5sdWNpYXoubWUvZXh0ZG9tYWlucy93d3cuZ29vZ2xlLmNvbS9zb3JyeS9pbmRleD9jb250aW51ZT1odHRwczolMkYlMkZ3d3cuZ29vZ2xlLmNvbS5oayUyRnNlYXJjaCUzRnElM0QucGhwJTI1M0ZpZCUyNTNEJTI2JnE9RWhBbUJBR0FBQU1OM3dBQUFBQUFBT3NsR0pqenVvc0dJaEJVaVN5eXFjSXJmeExHaU14dHBzS1hNZ0Z5")
-	u := "https://g.luciaz.me/ip_ban_verify_page?origin=aHR0cHM6Ly9nLmx1Y2lhei5tZS8="
-	request, err := http.NewRequest(http.MethodPost, u, strings.NewReader(params.Encode()))
+	headers := map[string]string{
+		"User-Agent":   s.userAgent,
+		"Content-Type": "application/x-www-form-urlencoded",
+	}
+	u := "https://g.luciaz.me/ip_ban_verify_page"
+	_, err := request.Post(u, data, headers)
 	if err != nil {
-		log.Println("http.NewRequest failed,err:", err)
+		log.Println("request.Post failed,err:", err)
 		return err
-	}
-	request.Header.Set("User-Agent", s.userAgent)
-	request.Header.Set("Content-Type", "multipart/form-data")
-	resp, err := client.Do(request)
-	if err != nil {
-		logrus.Error("client.Do failed,err:", err)
-		return err
-	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		logrus.Error("ioutil.ReadAll failed,err:", err)
-		return err
-	}
-	if strings.Contains(string(b), "Wrong answer") {
-		return errors.New("Wrong answer")
 	}
 	return nil
 }

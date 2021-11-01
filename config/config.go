@@ -24,6 +24,7 @@ type AppConfig struct {
 	SearchEngine   string            `mapstructure:"search_engine"`
 	Keyword        string            `mapstructure:"keyword"`
 	Format         string            `mapstructure:"format"`
+	Proxy          string            `mapstructure:"proxy"`
 }
 
 //Init 初始化配置

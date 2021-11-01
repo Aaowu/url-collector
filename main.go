@@ -8,6 +8,7 @@ import (
 	"strings"
 	"url-collector/config"
 	"url-collector/pkg/filter"
+	"url-collector/pkg/request"
 	"url-collector/pkg/searchengine"
 
 	"github.com/olekukonko/tablewriter"
@@ -26,7 +27,7 @@ func main() {
 		Name:      "URL-Collector",
 		Usage:     "Collect URLs based on dork",
 		UsageText: "url-collector",
-		Version:   "v0.2",
+		Version:   "v0.3",
 		Authors:   []*cli.Author{&author},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -74,6 +75,12 @@ func main() {
 				Value:       config.DefaultConf.Format,
 				Destination: &config.CurrentConf.Format,
 			},
+			&cli.StringFlag{
+				Name:        "proxy",
+				Aliases:     []string{"p"},
+				Usage:       "specify http proxy",
+				Destination: &config.CurrentConf.Proxy,
+			},
 		},
 		Action: run,
 	}
@@ -89,8 +96,16 @@ func run(c *cli.Context) (err error) {
 		log.Println("config.Init failed,err:", err)
 		return err
 	}
+	//2.初始化请求器
+	if err := request.Init(); err != nil {
+		logrus.Error("request.Init failed,err:", err)
+		return err
+	}
 	//2.初始化过滤器
-	filter.Init()
+	if err := filter.Init(); err != nil {
+		logrus.Error("filter.Init failed,err:", err)
+		return err
+	}
 	//3.抽象出一个Reader
 	reader, err := config.CurrentConf.GetReader()
 	if err != nil {
@@ -121,7 +136,7 @@ func run(c *cli.Context) (err error) {
 	case "baidu":
 		engine = searchengine.NewBaidu(baseConf)
 	default:
-		return errors.New("please specify a search engine,such as google-image,google,bing")
+		return errors.New("please specify a search engine,such as google-image,google,bing,baidu")
 	}
 	//6.开始采集
 	showConfig()

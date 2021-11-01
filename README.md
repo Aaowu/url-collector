@@ -10,7 +10,7 @@ USAGE:
    url-collector
 
 VERSION:
-   v0.2
+   v0.3
 
 AUTHOR:
    无在无不在 <2227627947@qq.com>
@@ -40,7 +40,7 @@ ERRO[0000] specify -f or -k please
 ```shell
 #根据指定关键字采集
 url-collector -k ".php?id=" 
-#批量采集文件中所有的关键字，并将结果保存到result.txt
+#批量采集文件中所有的关键字，并将结果保存到result.txt(result.txt中存在的url将不会再次采集)
 url-collector -f google-dork.txt -o result.txt
 #和sqlmap联动
 url-collector -f google-dork.txt -o result.txt && python3 sqlmap.py -m result.txt --batch --random-agents
@@ -54,6 +54,8 @@ url-collector -c config.json
 url-collector -e baidu -k ".php?id=1" -f domain
 #输出协议加域名
 url-collector -e baidu -k ".php?id=1" -f protocol_domain
+#使用代理
+url-collector -e baidu -p "http://127.0.0.1:8080" -k ".php?id=11"
 ```
 config.json 格式  
 ```json
